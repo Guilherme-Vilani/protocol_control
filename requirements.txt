@@ -1,1 +1,4 @@
-fastapi
+fastapi;
+pydantic;
+firebase-admin;
+python-multipart;

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FMO - Protocolo</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700&display=swap"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.8/jquery.inputmask.min.js"></script>
+  </head>
+  <body>
+    <header class="header">
+      <img
+        src="https://fmo.edu.br/wp-content/uploads/2024/01/logo_site.png"
+        alt="Logo FMO"
+        class="logo"
+      />
+      <h1>Faculdade de Medicina de Olinda - Protocolo</h1>
+    </header>
+
+    <div class="container">
+      <h2>Bem-vindo ao Protocolo</h2>
+      <p>
+        Protocolo FMO é um canal ativo e democrático de comunicação entre a
+        comunidade acadêmica e as instâncias administrativas da Faculdade.
+      </p>
+
+      <h3>Formulário de Contato</h3>
+      <div id="loading" class="loading" style="display: none">
+        <div class="spinner"></div>
+        <p>Enviando...</p>
+      </div>
+
+      <form id="ouvidoria-form">
+        <div class="form-group">
+          <label for="nome">Nome:</label>
+          <input type="text" id="nome" name="nome" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1">
+            <label for="cpf">CPF:</label>
+            <input type="text" id="cpf" name="cpf" required />
+          </div>
+          <div class="form-group" style="flex: 1">
+            <label for="telefone">Telefone:</label>
+            <input type="text" id="telefone" name="telefone" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="email">E-mail:</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+        <div class="form-group">
+          <label for="matricula">Número da Matrícula:</label>
+          <input type="text" id="matricula" name="matricula" required />
+        </div>
+        <div class="form-group">
+          <label for="assunto">Assunto:</label>
+          <input type="text" id="assunto" name="assunto" required />
+        </div>
+        <div class="form-group">
+          <label for="mensagem">Mensagem:</label>
+          <textarea id="mensagem" name="mensagem" rows="5" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="anexos">Anexar arquivos:</label>
+          <input type="file" id="anexos" name="anexos" multiple />
+        </div>
+        <button type="submit">Enviar</button>
+      </form>
+      <div id="success-message" class="success-message"></div>
+    </div>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Faculdade de Medicina de Olinda. Todos os direitos
+        reservados.
+      </p>
+    </footer>
+
+    <script>
+      // Aplica as máscaras ao carregar a página
+      $(document).ready(function () {
+        $("#cpf").inputmask("999.999.999-99");
+        $("#telefone").inputmask("(99) 99999-9999");
+      });
+
+      document
+        .getElementById("ouvidoria-form")
+        .addEventListener("submit", async function (event) {
+          event.preventDefault();
+
+          let formData = new FormData();
+
+          const data = JSON.stringify({
+            nome: document.getElementById("nome").value,
+            cpf: document.getElementById("cpf").value,
+            telefone: document.getElementById("telefone").value,
+            email: document.getElementById("email").value,
+            matricula: document.getElementById("matricula").value,
+            assunto: document.getElementById("assunto").value,
+            mensagem: document.getElementById("mensagem").value,
+          });
+
+          formData.append("protocol_data", data);
+
+          let filesInput = document.getElementById("anexos");
+          for (let i = 0; i < filesInput.files.length; i++) {
+            formData.append("files", filesInput.files[i]);
+          }
+
+          // Exibir loading e desativar botão
+          document.getElementById("loading").style.display = "flex";
+          let submitButton = document.querySelector("button[type='submit']");
+          submitButton.disabled = true;
+
+          try {
+            let response = await fetch(
+              "http://localhost:8000/insert-protocol/",
+              {
+                method: "POST",
+                body: formData,
+              }
+            );
+
+            let result = await response.json();
+
+            if (response.ok) {
+              document.getElementById("success-message").innerText =
+                "Protocolo enviado com sucesso!";
+              document.getElementById("success-message").style.color = "green";
+              document.getElementById("ouvidoria-form").reset();
+            } else {
+              throw new Error(result.detail || "Erro ao enviar protocolo");
+            }
+          } catch (error) {
+            document.getElementById("success-message").innerText =
+              "Erro: " + error.message;
+            document.getElementById("success-message").style.color = "red";
+          } finally {
+            // Ocultar loading e reativar botão
+            document.getElementById("loading").style.display = "none";
+            submitButton.disabled = false;
+          }
+        });
+    </script>
+
+    <style>
+      .loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .spinner {
+        border: 5px solid rgba(0, 0, 0, 0.1);
+        border-top: 5px solid #007bff;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 10px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </body>
+</html>

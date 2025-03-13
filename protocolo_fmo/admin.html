@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FMO - Painel de Administração</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700&display=swap"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="header">
+      <img
+        src="https://fmo.edu.br/wp-content/uploads/2024/01/logo_site.png"
+        alt="Logo FMO"
+        class="logo"
+      />
+      <h1>Painel de Administração - Protocolo</h1>
+    </header>
+
+    <div class="container">
+      <div class="search-container">
+        <input
+          type="text"
+          id="search"
+          placeholder="🔍 Pesquisar por ID, Matrícula ou CPF..."
+        />
+      </div>
+
+      <h2>Protocolos</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Telefone</th>
+            <th>Email</th>
+            <th>Matrícula</th>
+            <th>Assunto</th>
+            <th>Mensagem</th>
+            <th>Anexos</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="mensagens">
+          <!-- Dados serão inseridos dinamicamente -->
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="footer">
+      <p>
+        &copy; 2025 Faculdade de Medicina de Olinda. Todos os direitos
+        reservados.
+      </p>
+    </footer>
+
+    <!-- MODAL PARA EDIÇÃO -->
+    <div id="modal" class="modal" style="display: none">
+      <div class="modal-content">
+        <h3>Editar Protocolo</h3>
+        <label>Id:</label>
+        <input type="text" id="edit-id" readonly />
+
+        <label>Nome:</label>
+        <input type="text" id="edit-nome" readonly />
+
+        <label>CPF:</label>
+        <input type="text" id="edit-cpf" readonly />
+
+        <label>Telefone:</label>
+        <input type="text" id="edit-telefone" readonly />
+
+        <label>Email:</label>
+        <input type="text" id="edit-email" readonly />
+
+        <label>Matrícula:</label>
+        <input type="text" id="edit-matricula" readonly />
+
+        <label>Assunto:</label>
+        <input type="text" id="edit-assunto" readonly />
+
+        <label>Mensagem:</label>
+        <textarea id="edit-mensagem" readonly></textarea>
+
+        <label>Status:</label>
+        <select id="edit-status">
+          <option value="pendente">Pendente</option>
+          <option value="respondido">Respondido</option>
+        </select>
+
+        <div class="modal-buttons">
+          <button id="save-button">Salvar</button>
+          <button id="cancel-button">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let allData = [];
+      let selectedProtocolId = null;
+
+      document.addEventListener("DOMContentLoaded", function () {
+        fetchProtocols(); // Carrega todos os protocolos ao iniciar a página
+
+        // Adiciona evento ao botão de cancelar para fechar o modal
+        document
+          .getElementById("cancel-button")
+          .addEventListener("click", function () {
+            document.getElementById("modal").style.display = "none";
+          });
+
+        // Adiciona evento ao botão de salvar para atualizar o status
+        document
+          .getElementById("save-button")
+          .addEventListener("click", function () {
+            const newStatus = document.getElementById("edit-status").value;
+
+            fetch(`http://localhost:8000/update-status/${selectedProtocolId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: newStatus }),
+            })
+              .then((response) => response.json())
+              .then(() => {
+                document.getElementById("modal").style.display = "none";
+                fetchProtocols(); // Atualiza a tabela após edição
+              })
+              .catch((error) =>
+                console.error("Erro ao atualizar status:", error)
+              );
+          });
+
+        // Aplica a máscara automaticamente enquanto digita
+        document
+          .getElementById("search")
+          .addEventListener("input", function () {
+            let inputValue = this.value.replace(/\D/g, ""); // Remove tudo que não for número
+
+            if (inputValue.length === 11) {
+              this.value = formatCPF(inputValue); // Aplica a máscara
+            }
+
+            fetchProtocols(); // Chama a busca
+          });
+      });
+
+      function fetchProtocols() {
+        const query = document.getElementById("search").value.trim();
+        let url = "http://localhost:8000/get-protocols/";
+
+        if (query !== "") {
+          // Somente muda a URL se houver um termo de busca
+          let params = new URLSearchParams();
+          url = "http://localhost:8000/search-protocols/";
+
+          let cleanQuery = query.replace(/\D/g, "");
+
+          if (cleanQuery.length < 6 && cleanQuery.length > 0) {
+            params.append("id", cleanQuery);
+          } else if (cleanQuery.length === 11) {
+            params.append("cpf", formatCPF(cleanQuery));
+          } else if (cleanQuery.length == 9){
+            params.append("matricula", cleanQuery);
+          }
+
+          url += "?" + params.toString();
+        }
+
+        fetch(url)
+          .then((response) => response.json())
+          .then((data) => {
+            allData = data.protocols;
+            renderTable(allData);
+          })
+          .catch((error) =>
+            console.error("Erro ao carregar mensagens:", error)
+          );
+      }
+
+      function formatCPF(value) {
+        return value.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+      }
+
+      function renderTable(data) {
+        const tbody = document.getElementById("mensagens");
+        tbody.innerHTML = "";
+
+        data.forEach((msg) => {
+          const row = document.createElement("tr");
+
+          let statusIcon =
+            msg.status && msg.status.toLowerCase() === "respondido"
+              ? "✅"
+              : "⏳";
+          let editIcon =
+            msg.status === "respondido"
+              ? ""
+              : `<span class="edit-icon" data-id="${msg.id}" style="cursor:pointer;">📝</span>`;
+
+          row.innerHTML = `
+          <td>${msg.id}</td>
+          <td>${msg.nome}</td>
+          <td>${msg.cpf}</td>
+          <td>${msg.telefone}</td>
+          <td>${msg.email}</td>
+          <td>${msg.matricula}</td>
+          <td>${msg.assunto}</td>
+          <td>${msg.mensagem}</td>
+          <td>${
+            msg.anexos.length > 0
+              ? msg.anexos
+                  .map(
+                    (file) => `<a href="${file}" target="_blank">Arquivo</a>`
+                  )
+                  .join(", ")
+              : "Nenhum"
+          }</td>
+          <td style="text-align: center; font-size: 20px;">${statusIcon}</td>
+          <td>${editIcon}</td>
+        `;
+
+          tbody.appendChild(row);
+        });
+
+        // Reaplicação correta dos eventos para abrir o modal
+        document.querySelectorAll(".edit-icon").forEach((icon) => {
+          icon.addEventListener("click", function () {
+            selectedProtocolId = this.getAttribute("data-id");
+            openModal(selectedProtocolId);
+          });
+        });
+      }
+
+      function openModal(protocolId) {
+        const protocolo = allData.find((p) => p.id == protocolId);
+
+        if (!protocolo) {
+          console.error("Protocolo não encontrado!");
+          return;
+        }
+
+        document.getElementById("edit-id").value = protocolo.id;
+        document.getElementById("edit-nome").value = protocolo.nome;
+        document.getElementById("edit-cpf").value = protocolo.cpf;
+        document.getElementById("edit-telefone").value = protocolo.telefone;
+        document.getElementById("edit-email").value = protocolo.email;
+        document.getElementById("edit-matricula").value = protocolo.matricula;
+        document.getElementById("edit-assunto").value = protocolo.assunto;
+        document.getElementById("edit-mensagem").value = protocolo.mensagem;
+        document.getElementById("edit-status").value = protocolo.status;
+
+        document.getElementById("modal").style.display = "block";
+      }
+    </script>
+
+    <style>
+      /* Estilo do campo de pesquisa */
+      .search-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+
+      #search {
+        width: 50%;
+        padding: 10px;
+        font-size: 16px;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        outline: none;
+        transition: 0.3s;
+      }
+
+      #search:focus {
+        border-color: #007bff;
+        box-shadow: 0px 0px 8px rgba(0, 123, 255, 0.5);
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        width: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 0px 10px gray;
+      }
+      .modal-content {
+        display: flex;
+        flex-direction: column;
+      }
+      .modal-buttons {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+      }
+      .edit-icon {
+        font-size: 20px;
+      }
+    </style>
+  </body>
+</html>
