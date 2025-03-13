@@ -21,7 +21,7 @@ app.add_middleware(
 )
 
 # Inicializa o Firebase
-cred = credentials.Certificate("fmo-medicine-firebase-adminsdk-fbsvc-f34cfb13d5.json") # colocar o arquivo
+cred = credentials.Certificate("") # colocar o arquivo
 firebase_admin.initialize_app(cred, {"storageBucket": "fmo-medicine.firebasestorage.app"})
 
 db = firestore.client()
