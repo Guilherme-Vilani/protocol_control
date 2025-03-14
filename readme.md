@@ -9,4 +9,4 @@
 
 # Para executar o projeto executar o comando a seguir no terminal do vscode.
 
-# uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+# uvicorn main:app --host 0.0.0.0 --port 8000 --reload || python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
